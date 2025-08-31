@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: mcp-demo
+  ai:
+    mcp:
+      server:
+        name: java-zj-mcp
+        version: 1.0.0
+        type: ASYNC
+        enabled: true
+        stdio:
+          enabled: true
+        web:
+          enabled: true
+          path: /mcp
+        sse:
+          enabled: true
+          path: /mcp/messages
+
+server:
+  port: 8081
