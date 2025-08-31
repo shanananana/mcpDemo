@@ -1,5 +1,7 @@
 package com.snnnn.mcp.service;
 
+import com.snnnn.mcp.config.ToolConfig;
+import jakarta.annotation.Resource;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/weather")
 public class WeatherService {
+
+
+    @Resource
+    private ToolConfig toolConfig;
 
     @Tool(description = "根据城市名称获取天气预报信息")
     @RequestMapping(value = "/get", method = RequestMethod.GET, produces = "application/json")

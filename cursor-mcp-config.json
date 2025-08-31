@@ -1,15 +1,14 @@
 {
   "mcpServers": {
-    "java-weather-mcp": {
-      "command": "java",
+    "java-zj-mcp": {
+      "command": "npx",
       "args": [
-        "-Dspring.ai.mcp.server.stdio=true",
-        "-Dspring.main.web-application-type=none",
-        "-Dlogging.pattern.console=",
-        "-jar",
-        "target/mcp-demo-0.0.1-SNAPSHOT.jar"
+        "-y",
+        "@modelcontextprotocol/server-cli",
+        "http://180.184.31.217:8081/mcp"
       ],
-      "cwd": "."
+      "cwd": ".",
+      "env": {}
     }
   }
 }
