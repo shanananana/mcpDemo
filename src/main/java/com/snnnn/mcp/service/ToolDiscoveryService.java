@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.lang.annotation.Annotation;
+import org.springframework.ai.tool.annotation.ToolParam;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,15 +49,8 @@ public class ToolDiscoveryService {
                         tool.put("requestPath", getRequestPath(method));
                         tool.put("httpMethod", getHttpMethod(method));
                         tool.put("description", getToolDescription(method));
-                        
-                        // Group by package name or custom logic (e.g., "weather" for WeatherService)
-                        String group = targetClass.getPackageName().split("\\.")[-1];  // e.g., "service" -> customize
-                        if (targetClass.getSimpleName().contains("Weather")) {
-                            group = "weather";
-                        } else if (targetClass.getSimpleName().contains("Pdf")) {
-                            group = "pdf";
-                        }
-                        groupedTools.computeIfAbsent(group, k -> new ArrayList<>()).add(tool);
+
+                        groupedTools.computeIfAbsent(targetClass.getSimpleName(), k -> new ArrayList<>()).add(tool);
                     }
                 }
             }
@@ -71,17 +65,49 @@ public class ToolDiscoveryService {
         List<Map<String, Object>> params = new ArrayList<>();
         Class<?>[] paramTypes = method.getParameterTypes();
         String[] paramNames = getParameterNames(method);
-        
+
         for (int i = 0; i < paramTypes.length; i++) {
-            Map<String, Object> param = new HashMap<>();
-            param.put("name", paramNames[i]);
-            param.put("type", paramTypes[i].getSimpleName());
-            param.put("fullType", paramTypes[i].getName());
-            param.put("required", true);
-            param.put("example", "");  // Default empty; can parse from annotation or Javadoc later
-            params.add(param);
+            Class<?> type = paramTypes[i];
+            String baseName = (i < paramNames.length ? paramNames[i] : ("param" + (i + 1)));
+
+            if (isSimpleType(type)) {
+                Map<String, Object> param = new HashMap<>();
+                param.put("name", baseName);
+                param.put("type", type.getSimpleName());
+                param.put("fullType", type.getName());
+                param.put("required", true);
+                param.put("example", "");
+                params.add(param);
+            } else {
+                // 仅展开带有 @ToolParam 的字段
+                for (var field : type.getDeclaredFields()) {
+                    if (!field.isAnnotationPresent(ToolParam.class)) {
+                        continue;
+                    }
+                    Map<String, Object> sub = new HashMap<>();
+                    sub.put("name", baseName + "." + field.getName());
+                    sub.put("type", field.getType().getSimpleName());
+                    sub.put("fullType", field.getType().getName());
+                    sub.put("required", true);
+                    // 从注解中带出描述
+                    ToolParam tp = field.getAnnotation(ToolParam.class);
+                    sub.put("description", tp != null ? tp.description() : "");
+                    sub.put("example", "");
+                    params.add(sub);
+                }
+            }
         }
         return params;
+    }
+
+    private boolean isSimpleType(Class<?> type) {
+        return type.isPrimitive()
+                || type.equals(String.class)
+                || Number.class.isAssignableFrom(type)
+                || type.equals(Boolean.class)
+                || type.equals(Character.class)
+                || type.getName().startsWith("java.time.")
+                || type.getName().startsWith("java.lang.");
     }
 
     private String[] getParameterNames(Method method) {

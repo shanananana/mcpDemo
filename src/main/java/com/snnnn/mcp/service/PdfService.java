@@ -7,8 +7,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +19,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +33,9 @@ public class PdfService {
     @Value("${server.port:8081}")
     private int serverPort;
 
-    @Tool(description = "将输入文本生成 PDF 文件并返回下载地址")
     public Map<String, Object> generatePdf(
-            @ToolParam(description = "PDF 标题") String title,
-            @ToolParam(description = "PDF 正文内容") String content
+            String title,
+            String content
     ) {
         Map<String, Object> response = new HashMap<>();
 
@@ -68,18 +66,17 @@ public class PdfService {
         }
     }
 
-    @Tool(description = "根据完整 HTML 生成 PDF 并返回下载地址")
     public Map<String, Object> generatePdfFromHtml(
-            @ToolParam(description = "PDF 标题，用于文件名") String title,
-            @ToolParam(description = "完整 HTML 内容，包含样式") String html
+            String title,
+            String html
     ) {
         Map<String, Object> response = new HashMap<>();
         try {
             ensureStorageDir();
 
+            String fileId = UUID.randomUUID().toString();
             String safeTitle = (title == null || title.isBlank()) ? "document" : slugify(title);
-            String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
-            String fileName = safeTitle + "_" + timestamp + ".pdf";
+            String fileName = safeTitle + "_" + fileId + ".pdf";
             Path outputPath = Paths.get(storageDir).resolve(fileName);
 
             // Render HTML to PDF
@@ -94,13 +91,11 @@ public class PdfService {
                 builder.run();
             }
 
-            String downloadUrl = "http://localhost:" + serverPort + "/pdf/download?filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-
             response.put("status", "success");
             response.put("message", "PDF 生成成功 (HTML)");
+            response.put("fileId", fileId);
             response.put("fileName", fileName);
             response.put("filePath", outputPath.toAbsolutePath().toString());
-            response.put("downloadUrl", downloadUrl);
             response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             return response;
         } catch (Exception e) {
@@ -111,8 +106,15 @@ public class PdfService {
         }
     }
 
-    public Path resolveFile(String fileName) {
-        return Paths.get(storageDir).resolve(fileName).toAbsolutePath();
+    public Path resolveFileById(String fileId) throws IOException {
+        Path dir = Paths.get(storageDir).toAbsolutePath();
+        if (!Files.exists(dir)) return dir.resolve(fileId + ".pdf");
+        try (var stream = Files.list(dir)) {
+            return stream
+                    .filter(p -> p.getFileName().toString().contains(fileId))
+                    .findFirst()
+                    .orElse(dir.resolve(fileId + ".pdf"));
+        }
     }
 
     private void ensureStorageDir() throws IOException {

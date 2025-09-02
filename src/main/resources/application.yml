@@ -1,6 +1,10 @@
+
+
 spring:
   application:
     name: mcp-demo
+  webflux:
+    base-path: /api
   ai:
     mcp:
       server:

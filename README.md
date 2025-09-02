@@ -10,7 +10,5 @@
 - 后台：`nohup java -jar target/mcp-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &`
 
 ## API 示例
-- GET `/weather/get?cityName=北京`
-- GET `/weather/air-quality?cityName=上海`
-- GET `/weather/info`
+ 
 - GET `/api/mcp/tools`
