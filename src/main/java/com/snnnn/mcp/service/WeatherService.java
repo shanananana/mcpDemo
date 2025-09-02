@@ -1,11 +1,8 @@
 package com.snnnn.mcp.service;
 
-import com.snnnn.mcp.config.ToolConfig;
-import jakarta.annotation.Resource;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -14,21 +11,13 @@ import java.util.Map;
 /**
  * WeatherService
  *
- * @author zj
- * @since 2025/04/22 21:11
+ * 业务层：提供天气与空气质量查询能力，并作为 MCP 工具被调用。
  */
 @Service
-@RestController
-@RequestMapping("/weather")
 public class WeatherService {
 
-
-    @Resource
-    private ToolConfig toolConfig;
-
     @Tool(description = "根据城市名称获取天气预报信息")
-    @RequestMapping(value = "/get", method = RequestMethod.GET, produces = "application/json")
-    public Map<String, Object> getWeather(@ToolParam(description = "城市") @RequestParam String cityName) {
+    public Map<String, Object> getWeather(@ToolParam(description = "城市") String cityName) {
         Map<String, Object> response = new HashMap<>();
         response.put("city", cityName);
         response.put("temperature", 15);
@@ -44,8 +33,7 @@ public class WeatherService {
     }
 
     @Tool(description = "根据城市名称获取空气质量")
-    @RequestMapping(value = "/air-quality", method = RequestMethod.GET, produces = "application/json")
-    public Map<String, Object> getAirQuality(@ToolParam(description = "城市") @RequestParam String cityName) {
+    public Map<String, Object> getAirQuality(@ToolParam(description = "城市") String cityName) {
         Map<String, Object> response = new HashMap<>();
         response.put("city", cityName);
         response.put("aqi", 45);
@@ -58,7 +46,6 @@ public class WeatherService {
         return response;
     }
 
-    @RequestMapping(value = "/info", method = RequestMethod.GET, produces = "application/json")
     public Map<String, Object> getInfo() {
         Map<String, Object> response = new HashMap<>();
         response.put("server", "Java MCP Weather Service");

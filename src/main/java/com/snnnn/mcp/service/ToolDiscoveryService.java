@@ -3,6 +3,7 @@ package com.snnnn.mcp.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -11,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -21,40 +21,46 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RestController
-@RequestMapping("/api/mcp")
 public class ToolDiscoveryService {
 
     @Autowired
     private ApplicationContext applicationContext;
 
-    @GetMapping("/tools")
-    public Map<String, Object> getTools() {
+    public Map<String, Object> listTools() {
         Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> tools = new ArrayList<>();
+        Map<String, List<Map<String, Object>>> groupedTools = new HashMap<>();
         
         try {
             String[] beanNames = applicationContext.getBeanDefinitionNames();
             for (String beanName : beanNames) {
                 Object bean = applicationContext.getBean(beanName);
-                Method[] methods = bean.getClass().getMethods();
+                Class<?> targetClass = AopUtils.getTargetClass(bean);
+                Method[] methods = targetClass.getMethods();
                 for (Method method : methods) {
                     if (hasToolAnnotation(method)) {
                         Map<String, Object> tool = new HashMap<>();
                         tool.put("name", method.getName());
                         tool.put("bean", beanName);
-                        tool.put("className", bean.getClass().getSimpleName());
+                        tool.put("className", targetClass.getSimpleName());
                         tool.put("methodSignature", method.toString());
                         tool.put("returnType", method.getReturnType().getSimpleName());
                         tool.put("parameters", getMethodParameters(method));
                         tool.put("requestPath", getRequestPath(method));
                         tool.put("httpMethod", getHttpMethod(method));
                         tool.put("description", getToolDescription(method));
-                        tools.add(tool);
+                        
+                        // Group by package name or custom logic (e.g., "weather" for WeatherService)
+                        String group = targetClass.getPackageName().split("\\.")[-1];  // e.g., "service" -> customize
+                        if (targetClass.getSimpleName().contains("Weather")) {
+                            group = "weather";
+                        } else if (targetClass.getSimpleName().contains("Pdf")) {
+                            group = "pdf";
+                        }
+                        groupedTools.computeIfAbsent(group, k -> new ArrayList<>()).add(tool);
                     }
                 }
             }
-            result.put("tools", tools);
+            result.put("groupedTools", groupedTools);
         } catch (Exception e) {
             result.put("error", e.getMessage());
         }
@@ -72,6 +78,7 @@ public class ToolDiscoveryService {
             param.put("type", paramTypes[i].getSimpleName());
             param.put("fullType", paramTypes[i].getName());
             param.put("required", true);
+            param.put("example", "");  // Default empty; can parse from annotation or Javadoc later
             params.add(param);
         }
         return params;
@@ -152,7 +159,7 @@ public class ToolDiscoveryService {
             path.append(getMapping.value()[0]);
         } else {
             // 检查@PostMapping
-            PostMapping postMapping = method.getAnnotation(PostMapping.class);
+            org.springframework.web.bind.annotation.PostMapping postMapping = method.getAnnotation(org.springframework.web.bind.annotation.PostMapping.class);
             if (postMapping != null && postMapping.value().length > 0) {
                 path.append(postMapping.value()[0]);
             } else {
@@ -167,7 +174,7 @@ public class ToolDiscoveryService {
                         path.append(deleteMapping.value()[0]);
                     } else {
                         // 检查@RequestMapping
-                        RequestMapping methodMapping = method.getAnnotation(RequestMapping.class);
+                        org.springframework.web.bind.annotation.RequestMapping methodMapping = method.getAnnotation(org.springframework.web.bind.annotation.RequestMapping.class);
                         if (methodMapping != null && methodMapping.value().length > 0) {
                             path.append(methodMapping.value()[0]);
                         } else {
@@ -194,7 +201,7 @@ public class ToolDiscoveryService {
             return "GET";
         }
         
-        if (method.isAnnotationPresent(PostMapping.class)) {
+        if (method.isAnnotationPresent(org.springframework.web.bind.annotation.PostMapping.class)) {
             return "POST";
         }
         
@@ -207,7 +214,7 @@ public class ToolDiscoveryService {
         }
         
         // 检查@RequestMapping
-        RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
+        org.springframework.web.bind.annotation.RequestMapping requestMapping = method.getAnnotation(org.springframework.web.bind.annotation.RequestMapping.class);
         if (requestMapping != null && requestMapping.method().length > 0) {
             return requestMapping.method()[0].name();
         }
