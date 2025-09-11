@@ -55,6 +55,12 @@ public class ToolDiscoveryService {
                 }
             }
             result.put("groupedTools", groupedTools);
+            
+            // 添加 MCP 任务修订文档
+            Map<String, Object> mcpTaskRevisions = scanMcpTaskRevisions();
+            if (!mcpTaskRevisions.isEmpty()) {
+                result.put("mcpTaskRevisions", mcpTaskRevisions);
+            }
         } catch (Exception e) {
             result.put("error", e.getMessage());
         }
@@ -270,5 +276,32 @@ public class ToolDiscoveryService {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    /**
+     * 扫描 MCP task revision 文档文件夹，读取工具使用说明
+     */
+    private Map<String, Object> scanMcpTaskRevisions() {
+        Map<String, Object> revisions = new HashMap<>();
+        try {
+            java.nio.file.Path docPath = java.nio.file.Paths.get("doc", "MCP task revision");
+            if (java.nio.file.Files.exists(docPath)) {
+                java.nio.file.Files.list(docPath)
+                    .filter(path -> path.toString().endsWith(".md"))
+                    .forEach(path -> {
+                        try {
+                            String fileName = path.getFileName().toString();
+                            String toolName = fileName.replace(".md", "");
+                            String content = java.nio.file.Files.readString(path);
+                            revisions.put(toolName, content);
+                        } catch (Exception e) {
+                            // 忽略单个文件读取错误
+                        }
+                    });
+            }
+        } catch (Exception e) {
+            // 忽略文档扫描错误
+        }
+        return revisions;
     }
 }

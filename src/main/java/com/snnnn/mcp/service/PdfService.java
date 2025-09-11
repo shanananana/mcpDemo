@@ -49,19 +49,12 @@ public class PdfService {
 
             writePdf(outputPath, title, content);
 
-            String downloadUrl = "http://localhost:" + serverPort + "/pdf/download?filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-
             response.put("status", "success");
             response.put("message", "PDF 生成成功");
-            response.put("fileName", fileName);
-            response.put("filePath", outputPath.toAbsolutePath().toString());
-            response.put("downloadUrl", downloadUrl);
-            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             return response;
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", e.getMessage());
-            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             return response;
         }
     }
@@ -94,14 +87,10 @@ public class PdfService {
             response.put("status", "success");
             response.put("message", "PDF 生成成功 (HTML)");
             response.put("fileId", fileId);
-            response.put("fileName", fileName);
-            response.put("filePath", outputPath.toAbsolutePath().toString());
-            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             return response;
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", e.getMessage());
-            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             return response;
         }
     }
